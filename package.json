@@ -1,0 +1,114 @@
+{
+  "name": "app-matematicas",
+  "private": true,
+  "version": "0.2.0",
+  "description": "Derechos reservados por Gabriel Gonzalez",
+  "author": "Gabriel Gonzalez",
+  "type": "module",
+  "main": "dist-electron/main.cjs",
+  "scripts": {
+    "dev": "concurrently -k -n server,web -c blue,magenta \"tsx watch --clear-screen=false server/index.ts\" \"vite\"",
+    "build": "tsc -b && vite build",
+    "start": "npm run build && tsx server/index.ts --prod",
+    "serve": "tsx server/index.ts --prod",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b",
+    "build:electron": "node scripts/build-electron.mjs",
+    "build:companion": "vite build --config vite.companion.config.ts",
+    "dev:companion": "vite --config vite.companion.config.ts",
+    "desktop": "npm run build && npm run build:electron && electron .",
+    "dist:win": "npm run build && npm run build:electron && node scripts/dist-win.mjs",
+    "android:sync": "npm run build:companion && cap sync android",
+    "apk": "npm run android:sync && node scripts/build-apk.mjs",
+    "icons": "electron scripts/make-icons.cjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@anthropic-ai/sdk": "^0.129.0",
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/screen-orientation": "^8.0.1",
+    "@dagrejs/dagre": "^3.1.1",
+    "@types/express": "^5.0.6",
+    "@types/katex": "^0.16.8",
+    "@types/node": "^26.6.3",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-react": "^6.1.1",
+    "concurrently": "^10.0.5",
+    "dotenv": "^18.0.4",
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.2",
+    "express": "^5.2.1",
+    "jsqr": "^1.4.0",
+    "katex": "^0.18.9",
+    "mathlive": "^0.110.0",
+    "perfect-freehand": "^1.2.3",
+    "qrcode": "^1.5.4",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-router-dom": "^7.18.4",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.2",
+    "ws": "^8.22.0",
+    "zod": "^4.6.5",
+    "zustand": "^5.0.15"
+  },
+  "build": {
+    "appId": "com.matematica.app",
+    "productName": "Matemática",
+    "copyright": "Derechos reservados por Gabriel Gonzalez",
+    "executableName": "Matematica",
+    "artifactName": "Matematica-Setup-${version}.${ext}",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icon.png",
+        "to": "icon.png"
+      }
+    ],
+    "npmRebuild": false,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Matemática",
+      "uninstallDisplayName": "Matemática",
+      "installerLanguages": [
+        "es_ES"
+      ],
+      "language": "3082",
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js",
+        "run",
+        "dev"
+      ],
+      "port": 5173
+    },
+    {
+      "name": "companion",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js",
+        "run",
+        "dev:companion"
+      ],
+      "port": 5174
+    },
+    {
+      "name": "prod",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js",
+        "run",
+        "serve"
+      ],
+      "port": 8787
+    },
+    {
+      "name": "companion-build",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "node_modules/vite/bin/vite.js",
+        "preview",
+        "--config",
+        "vite.companion.config.ts",
+        "--port",
+        "5175",
+        "--strictPort"
+      ],
+      "port": 5175
+    }
+  ]
+}

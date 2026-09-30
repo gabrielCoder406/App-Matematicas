@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Pizarra Matemática</string>
+    <string name="app_description">Derechos reservados por Gabriel Gonzalez</string>
+    <string name="title_activity_main">Pizarra Matemática</string>
+    <string name="package_name">com.matematica.pizarra</string>
+    <string name="custom_url_scheme">com.matematica.pizarra</string>
+</resources>
