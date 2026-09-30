@@ -5,18 +5,22 @@ y diagnóstico del error, aprendizaje adaptativo con repetición espaciada, escr
 (en el PC o desde el móvil) que se convierte en fórmulas y una wiki de temas para consultar en
 cualquier momento.
 
-Son dos aplicaciones que trabajan juntas:
+Son dos aplicaciones que trabajan juntas.
 
-| App | Qué es | Archivo |
+## Descargar
+
+| App | Qué es | Descarga |
 | --- | --- | --- |
-| **Matemática** (escritorio, Windows) | La app completa: temario, lecciones, práctica, pizarra, progreso. Incluye el servidor local al que se conecta el móvil. | `release/Matematica-Setup-<versión>.exe` |
-| **Pizarra Matemática** (Android) | El móvil como pizarra: lo que escribes aparece en el PC y puedes responder los ejercicios desde el teléfono. | `release/PizarraMatematica-<versión>.apk` |
+| **Matemática** (escritorio, Windows) | La app completa: temario, lecciones, práctica, pizarra, progreso. Incluye el servidor local al que se conecta el móvil. | [Matematica-Setup-0.2.0.exe](https://github.com/gabrielCoder406/App-Matematicas/releases/download/v0.2.0/Matematica-Setup-0.2.0.exe) (113 MB) |
+| **Pizarra Matemática** (Android) | El móvil como pizarra: lo que escribes aparece en el PC y puedes responder los ejercicios desde el teléfono. | [PizarraMatematica-0.2.0.apk](https://github.com/gabrielCoder406/App-Matematicas/releases/download/v0.2.0/PizarraMatematica-0.2.0.apk) (4,5 MB) |
+
+Todas las versiones, con sus novedades, están en [Releases](https://github.com/gabrielCoder406/App-Matematicas/releases).
 
 ## Instalar
 
 ### App de escritorio (Windows)
 
-1. Ejecuta `Matematica-Setup-<versión>.exe`. Windows puede mostrar «Windows protegió su PC» porque el instalador no está firmado: elige **Más información → Ejecutar de todas formas**.
+1. Descarga y ejecuta `Matematica-Setup-<versión>.exe`. Windows puede mostrar «Windows protegió su PC» porque el instalador no está firmado: elige **Más información → Ejecutar de todas formas**.
 2. La primera vez que abras la app, Windows puede preguntar si permite el acceso a la red: marca **Redes privadas** y acepta. Sin ese permiso el móvil no podrá conectarse.
 3. Para la inteligencia artificial, instala [Ollama](https://ollama.com/download) (gratis) y, en **Ajustes**, descarga los dos modelos (ver abajo). Sin IA, todo lo demás funciona: el motor matemático de la app corrige los pasos, da las pistas y detecta los errores por su cuenta.
 
@@ -39,7 +43,7 @@ La IA corre en el propio equipo con [Ollama](https://ollama.com), sin Internet n
 
 ### App del móvil (Android)
 
-1. Copia `PizarraMatematica-<versión>.apk` al teléfono (cable USB, Drive, correo…) y ábrelo.
+1. Abre el enlace de descarga del APK desde el navegador del teléfono (o copia el archivo al teléfono por cable USB, Drive, correo…) y ábrelo.
 2. Android pedirá permitir la instalación desde esa fuente («Instalar apps desconocidas»): permítelo para la app con la que abriste el archivo.
 3. Abre **Pizarra Matemática**.
 
