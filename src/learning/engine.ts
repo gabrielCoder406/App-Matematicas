@@ -188,8 +188,12 @@ function bumpDay(days: Record<string, DayStats>, key: string, patch: Partial<Day
   };
 }
 
-/** Aplica un intento al progreso y devuelve el nuevo estado y los eventos (dominio, desbloqueos, baches…). */
-export function applyAttempt(data: ProgressData, input: AttemptInput, now = Date.now()): { data: ProgressData; events: EngineEvent[] } {
+/**
+ * Aplica un intento al progreso y devuelve el nuevo estado y los eventos (dominio, desbloqueos, baches…).
+ * Con `idBase`, los identificadores del intento, del error y del refuerzo se derivan de él: así el
+ * mismo intento produce exactamente el mismo resultado en el PC y en el móvil (ver sync/ops.ts).
+ */
+export function applyAttempt(data: ProgressData, input: AttemptInput, now = Date.now(), idBase?: string): { data: ProgressData; events: EngineEvent[] } {
   const events: EngineEvent[] = [];
   const statesBefore = allStates(data);
   const skills = { ...data.skills };
@@ -269,7 +273,7 @@ export function applyAttempt(data: ProgressData, input: AttemptInput, now = Date
       }
     }
     if (target && !remediation.some((r) => r.skillId === target && r.forSkill === input.skillId && r.remaining > 0)) {
-      const r: Remediation = { id: uid(), skillId: target, forSkill: input.skillId, bug: input.bug, remaining: REMEDIATION_SIZE, total: REMEDIATION_SIZE, createdAt: now };
+      const r: Remediation = { id: idBase ? `${idBase}r` : uid(), skillId: target, forSkill: input.skillId, bug: input.bug, remaining: REMEDIATION_SIZE, total: REMEDIATION_SIZE, createdAt: now };
       remediation = [...remediation, r];
       events.push({ type: 'gap', remediation: r, cause });
       if (cause === 'streak') skills[input.skillId] = { ...skills[input.skillId], failStreak: 0 };
@@ -278,14 +282,14 @@ export function applyAttempt(data: ProgressData, input: AttemptInput, now = Date
 
   // Registro del intento y del error
   const attempt: Attempt = {
-    id: uid(), t: now, skillId: input.skillId, generatorId: input.generatorId, seed: input.seed, level: input.level,
+    id: idBase ?? uid(), t: now, skillId: input.skillId, generatorId: input.generatorId, seed: input.seed, level: input.level,
     correct: input.correct, partial: !!input.partial, hintsUsed: input.hintsUsed, activeMs: input.activeMs,
     expectedMs: input.expectedMs, bug: input.bug, reason: input.reason,
   };
   const attempts = [...data.attempts, attempt].slice(-MAX_ATTEMPTS);
   let errors = data.errors;
   if (!input.correct && input.error) {
-    errors = [...errors, { ...input.error, id: uid(), t: now, skillId: input.skillId, bug: input.bug ?? 'other' }].slice(-MAX_ERRORS);
+    errors = [...errors, { ...input.error, id: idBase ? `${idBase}e` : uid(), t: now, skillId: input.skillId, bug: input.bug ?? 'other' }].slice(-MAX_ERRORS);
   }
 
   const days = bumpDay(data.days, dayKey(now), {
@@ -321,10 +325,10 @@ export function applyAttempt(data: ProgressData, input: AttemptInput, now = Date
   return { data: next, events };
 }
 
-/** Suma tiempo efectivo de cálculo al día y (opcionalmente) a la habilidad. */
-export function addActiveTime(data: ProgressData, ms: number, skillId?: string, now = Date.now()): ProgressData {
+/** Suma tiempo efectivo de cálculo al día (`day`, por defecto el de `now`) y (opcionalmente) a la habilidad. */
+export function addActiveTime(data: ProgressData, ms: number, skillId?: string, now = Date.now(), day = dayKey(now)): ProgressData {
   if (ms <= 0) return data;
-  const days = bumpDay(data.days, dayKey(now), { activeMs: ms });
+  const days = bumpDay(data.days, day, { activeMs: ms });
   if (!skillId) return { ...data, days };
   const p = sp(data, skillId);
   return { ...data, days, skills: { ...data.skills, [skillId]: { ...p, activeMs: p.activeMs + ms } } };

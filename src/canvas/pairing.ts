@@ -5,7 +5,7 @@ import { activity } from '../lib/activity';
 import { kv } from '../lib/storage';
 import type { InkCanvasHandle } from './InkCanvas';
 import type { InkModel } from './ink';
-import { pairUrl, type AnyMessage, type PeerMessage } from './protocol';
+import { pairUrl, type AnyMessage, type LinkMessage, type PeerMessage } from './protocol';
 
 export interface PairingState {
   status: 'idle' | 'connecting' | 'ready' | 'error';
@@ -48,12 +48,16 @@ export interface Opener {
 
 const STORE_KEY = 'mate-emparejamiento';
 
+/** Atiende un mensaje de los móviles que no es de la pizarra (sincronización, IA); true si lo atendió. */
+export type MessageListener = (msg: AnyMessage) => boolean;
+
 class HostPairing {
   private ws: WebSocket | null = null;
   private wanted = false;
   private retry: ReturnType<typeof setTimeout> | null = null;
   private boards: BoardTarget[] = [];
   private openers: Opener[] = [];
+  private listeners: MessageListener[] = [];
   /** Navegación de la app (la registra App para abrir la pizarra desde el móvil). */
   navigate: ((path: string) => void) | null = null;
 
@@ -137,8 +141,16 @@ class HostPairing {
     usePairing.setState({ url: pairUrl({ host, port, code }), address: local ? undefined : host, port });
   }
 
-  send(msg: PeerMessage): void {
+  send(msg: LinkMessage): void {
     if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(msg));
+  }
+
+  /** Registra quién atiende los mensajes que no son de la pizarra (sincronización del progreso, IA). */
+  addListener(l: MessageListener): () => void {
+    this.listeners.push(l);
+    return () => {
+      this.listeners = this.listeners.filter((x) => x !== l);
+    };
   }
 
   /** Envía el estado completo (tablero o «sin tablero») a los móviles. */
@@ -173,6 +185,7 @@ class HostPairing {
   }
 
   private handle(msg: AnyMessage): void {
+    for (const l of this.listeners) if (l(msg)) return;
     switch (msg.type) {
       case 'session': {
         kv.setItem(STORE_KEY, JSON.stringify({ id: msg.id, secret: msg.secret }));

@@ -1,4 +1,4 @@
-import { useEffect, useReducer } from 'react';
+import { useEffect, useReducer, type ReactNode } from 'react';
 import { Icon } from '../components/Icon';
 import { INK_COLORS, resolveColor, type InkModel } from './ink';
 import type { CanvasTool } from './InkCanvas';
@@ -17,11 +17,13 @@ interface Props {
   onClear(): void;
   onPair?(): void;
   compact?: boolean;
+  /** Botones al final de la barra (p. ej., en pantalla completa). */
+  extra?: ReactNode;
 }
 
 const SIZES = [3, 5, 9];
 
-export function InkToolbar({ model, tool, setTool, color, setColor, size, setSize, onUndo, onRedo, onClear, onPair, compact }: Props) {
+export function InkToolbar({ model, tool, setTool, color, setColor, size, setSize, onUndo, onRedo, onClear, onPair, compact, extra }: Props) {
   const [, force] = useReducer((x: number) => x + 1, 0);
   useEffect(() => model.subscribe(force), [model]);
   const peers = usePairing((s) => s.peers);
@@ -85,6 +87,7 @@ export function InkToolbar({ model, tool, setTool, color, setColor, size, setSiz
           {peers > 0 ? 'Móvil conectado' : compact ? 'Móvil' : 'Conectar móvil'}
         </button>
       )}
+      {extra && <div className="toolbar-extra">{extra}</div>}
     </div>
   );
 }

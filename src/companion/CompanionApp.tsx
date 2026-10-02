@@ -1,35 +1,13 @@
-// App del móvil («Pizarra Matemática»): se empareja con la app de escritorio y funciona
-// como pizarra remota. La misma interfaz se usa en la app Android (APK) y en el navegador
-// del móvil cuando se abre el enlace del QR (`embedded`: servida por el propio PC).
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+// Pizarra remota en el navegador del móvil, sin instalar la app: se abre con el enlace del QR
+// que muestra la app de escritorio (la sirve el propio PC). La app del móvil (APK) usa la misma
+// pizarra desde «Escribir en el PC» (ver phone/RemoteBoardPage.tsx).
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Icon } from '../components/Icon';
-import type { PairTarget } from '../canvas/protocol';
 import { useWiki } from '../store/wiki';
 import { Board } from './Board';
-import { ConnectScreen, type SavedPc } from './ConnectScreen';
-import { wsUrlFor } from './connection';
+import { CompanionLink, wsUrlFor } from './connection';
 
 const CompanionWiki = lazy(() => import('./CompanionWiki'));
-
-const LAST_KEY = 'pizarra-ultimo-pc';
-
-function loadLast(): SavedPc | null {
-  try {
-    const v = JSON.parse(localStorage.getItem(LAST_KEY) ?? 'null') as SavedPc | null;
-    return v && typeof v.host === 'string' && typeof v.port === 'number' && /^\d{6}$/.test(v.code) ? v : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveLast(pc: SavedPc | null): void {
-  try {
-    if (pc) localStorage.setItem(LAST_KEY, JSON.stringify(pc));
-    else localStorage.removeItem(LAST_KEY);
-  } catch {
-    /* sin almacenamiento */
-  }
-}
 
 function useSystemTheme() {
   useEffect(() => {
@@ -43,81 +21,34 @@ function useSystemTheme() {
   }, []);
 }
 
-export function CompanionApp({ embedded = false }: { embedded?: boolean }) {
+export function CompanionApp() {
   useSystemTheme();
   const wikiOpen = useWiki((s) => s.open);
+  const [error, setError] = useState<string | null>(() =>
+    /^\d{6}$/.test(new URLSearchParams(location.search).get('code') ?? '') ? null : 'Falta el código de emparejamiento. Escanea de nuevo el QR que muestra la app de escritorio.',
+  );
+  const link = useMemo(() => (error ? null : new CompanionLink(wsUrlFor(null))), [error]);
+
+  useEffect(() => {
+    if (!link) return undefined;
+    link.open();
+    const onVisible = () => document.visibilityState === 'visible' && link.kick();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      link.close();
+    };
+  }, [link]);
+
   return (
     <>
-      {embedded ? <EmbeddedCompanion /> : <StandaloneCompanion />}
+      {error || !link ? <ErrorScreen message={error ?? ''} onRetry={() => location.reload()} /> : <Board link={link} label={location.host} onRejected={setError} />}
       {wikiOpen && (
         <Suspense fallback={null}>
           <CompanionWiki />
         </Suspense>
       )}
     </>
-  );
-}
-
-/** Abierta desde el enlace del QR en el navegador del móvil. */
-function EmbeddedCompanion() {
-  const [error, setError] = useState<string | null>(() =>
-    /^\d{6}$/.test(new URLSearchParams(location.search).get('code') ?? '') ? null : 'Falta el código de emparejamiento. Escanea de nuevo el QR que muestra la app de escritorio.',
-  );
-  if (error) return <ErrorScreen message={error} onRetry={() => location.reload()} />;
-  return <Board wsUrl={wsUrlFor(null)} label={location.host} onRejected={setError} />;
-}
-
-/** App Android: recuerda el último PC y se reconecta sola al abrirla. */
-function StandaloneCompanion() {
-  const [last, setLast] = useState<SavedPc | null>(loadLast);
-  const [target, setTarget] = useState<PairTarget | null>(() => loadLast());
-  const [error, setError] = useState<string | null>(null);
-
-  const connect = (t: PairTarget) => {
-    setError(null);
-    const saved: SavedPc = { ...t, name: last && last.host === t.host && last.port === t.port ? last.name : undefined };
-    saveLast(saved);
-    setLast(saved);
-    setTarget(t);
-  };
-
-  const exit = useCallback(() => setTarget(null), []);
-
-  // Botón «atrás» de Android: vuelve a la pantalla de conexión en lugar de cerrar la app
-  // (salvo al cerrar la wiki abierta sobre la pizarra: se vuelve a la entrada del tablero).
-  useEffect(() => {
-    if (!target) return;
-    history.pushState({ board: true }, '');
-    const onPop = (e: PopStateEvent) => {
-      if (!(e.state as { board?: boolean } | null)?.board) setTarget(null);
-    };
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
-  }, [target]);
-
-  const onHostName = useCallback((name: string) => {
-    setLast((prev) => {
-      if (!prev || prev.name === name) return prev;
-      const next = { ...prev, name };
-      saveLast(next);
-      return next;
-    });
-  }, []);
-
-  if (!target) return <ConnectScreen last={last} error={error} onConnect={connect} />;
-  return (
-    <Board
-      key={`${target.host}:${target.port}:${target.code}`}
-      wsUrl={wsUrlFor(target)}
-      label={`${target.host}:${target.port}`}
-      onExit={() => (history.state?.board ? history.back() : exit())}
-      onRejected={(msg) => {
-        setError(msg);
-        if (history.state?.board) history.back();
-        else setTarget(null);
-      }}
-      onHostName={onHostName}
-    />
   );
 }
 

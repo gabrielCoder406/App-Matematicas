@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { askTutor, type TutorRequest } from '../lib/api';
+import { IS_PHONE } from '../lib/platform';
 import { Icon } from './Icon';
 import { RichText } from './Math';
 
@@ -69,18 +70,18 @@ export function TutorPanel({ request, onClose }: { request: TutorRequest; onClos
       {state === 'thinking' && (
         <div className="row small muted" style={{ gap: 10 }}>
           <span className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} />
-          Pensando… La IA corre en este equipo: puede tardar hasta un minuto y el texto aparece a medida que se escribe.
+          Pensando… La IA corre en {IS_PHONE ? 'el PC' : 'este equipo'}: puede tardar hasta un minuto y el texto aparece a medida que se escribe.
         </div>
       )}
       {text && <RichText text={tutorText(text)} className="tutor-text" />}
       {error && (
         <div className="callout danger small">
           <Icon className="callout-icon" name="alert" size={16} />
-          <div>{error} <Link to="/ajustes">Ir a Ajustes</Link></div>
+          <div>{error} {IS_PHONE ? <Link to="/pc">Ver la conexión con el PC</Link> : <Link to="/ajustes">Ir a Ajustes</Link>}</div>
         </div>
       )}
       <div className="tiny faint">
-        {state === 'stopped' ? 'Detenido. ' : ''}Respuesta generada por una IA en tu PC: puede equivocarse. La corrección de la app es la referencia.
+        {state === 'stopped' ? 'Detenido. ' : ''}Respuesta generada por una IA en el PC: puede equivocarse. La corrección de la app es la referencia.
       </div>
     </div>
   );

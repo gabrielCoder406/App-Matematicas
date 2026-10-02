@@ -1,4 +1,4 @@
-// Llamadas al servidor local.
+// Llamadas al servidor local. En la app del móvil, la IA es la del PC vinculado (ver phone/ai.ts).
 import { isDesktop } from './storage';
 
 export interface Health {
@@ -7,6 +7,8 @@ export interface Health {
   tutor?: boolean;
   version?: string;
   desktop?: boolean;
+  /** Nombre del equipo. */
+  name?: string;
 }
 
 export type OcrProvider = 'local' | 'claude';
@@ -54,6 +56,18 @@ export interface TutorRequest {
   question?: string;
 }
 
+/** IA de otro equipo (la app del móvil usa la del PC vinculado). */
+export interface RemoteAi {
+  recognize(pngDataUrl: string): Promise<{ lines: string[] }>;
+  askTutor(req: TutorRequest, onText: (t: string) => void, signal?: AbortSignal): Promise<void>;
+}
+
+let remoteAi: RemoteAi | null = null;
+
+export function setRemoteAi(ai: RemoteAi | null): void {
+  remoteAi = ai;
+}
+
 const OFFLINE = isDesktop
   ? 'No hay conexión con el servidor interno de la app. Reinicia la aplicación.'
   : 'No hay conexión con el servidor local. ¿Está ejecutándose «npm run dev»?';
@@ -97,6 +111,7 @@ export async function fetchNetwork(): Promise<{ addresses: string[]; serverPort:
 }
 
 export function recognize(pngDataUrl: string): Promise<{ lines: string[] }> {
+  if (remoteAi) return remoteAi.recognize(pngDataUrl);
   return request('/api/ocr', json('POST', { image: pngDataUrl }));
 }
 
@@ -153,6 +168,7 @@ export async function pullModel(which: 'ocr' | 'tutor', onProgress: (p: PullProg
 
 /** Pide una explicación al tutor (DeepSeek Math); el texto llega de a fragmentos. */
 export async function askTutor(req: TutorRequest, onText: (t: string) => void, signal?: AbortSignal): Promise<void> {
+  if (remoteAi) return remoteAi.askTutor(req, onText, signal);
   const r = await send('/api/tutor', { ...json('POST', req), signal });
   if (!r.ok || !r.body) {
     const body = (await r.json().catch(() => ({}))) as { error?: string };

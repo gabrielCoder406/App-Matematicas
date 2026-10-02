@@ -1,20 +1,15 @@
-// Pantalla inicial de la app del móvil: escanear el QR del PC o escribir dirección y código.
+// Vincular el móvil con el PC: escanear el QR que muestra la app de escritorio o escribir la
+// dirección y el código.
 import { useState } from 'react';
 import { Icon } from '../components/Icon';
 import { DEFAULT_PORT, parsePairUrl, type PairTarget } from '../canvas/protocol';
-import { openWiki } from '../store/wiki';
 import { QrScanner } from './QrScanner';
-import { COPYRIGHT } from '../../shared/about';
 
-export interface SavedPc extends PairTarget {
-  name?: string;
-}
-
-export function ConnectScreen({ last, error, onConnect }: { last: SavedPc | null; error?: string | null; onConnect(t: PairTarget): void }) {
+export function ConnectForm({ initialHost, initialPort, onConnect }: { initialHost?: string; initialPort?: number; onConnect(t: PairTarget): void }) {
   const [scanning, setScanning] = useState(false);
-  const [host, setHost] = useState(last?.host ?? '');
+  const [host, setHost] = useState(initialHost ?? '');
   const [code, setCode] = useState('');
-  const [port, setPort] = useState(String(last?.port ?? DEFAULT_PORT));
+  const [port, setPort] = useState(String(initialPort ?? DEFAULT_PORT));
   const [formError, setFormError] = useState<string | null>(null);
 
   const submit = (e: React.FormEvent) => {
@@ -52,31 +47,7 @@ export function ConnectScreen({ last, error, onConnect }: { last: SavedPc | null
   }
 
   return (
-    <div className="connect-screen">
-      <div className="connect-hero">
-        <div className="brand-mark big">∑</div>
-        <h1>Pizarra Matemática</h1>
-        <p className="muted">Escribe con el dedo o un lápiz y lo que escribes aparece en la app de escritorio.</p>
-      </div>
-
-      {error && (
-        <div className="callout danger small">
-          <Icon className="callout-icon" name="alert" size={16} />
-          <div>{error}</div>
-        </div>
-      )}
-
-      {last && (
-        <button className="card connect-last" onClick={() => onConnect(last)}>
-          <Icon name="refresh" size={20} />
-          <div>
-            <div style={{ fontWeight: 650 }}>Volver a conectar</div>
-            <div className="tiny faint">{last.name ? `${last.name} · ` : ''}{last.host}:{last.port}</div>
-          </div>
-          <Icon name="right" size={18} />
-        </button>
-      )}
-
+    <div className="stack">
       <button className="btn primary lg block" onClick={() => setScanning(true)}>
         <Icon name="camera" size={20} /> Escanear código QR
       </button>
@@ -99,22 +70,12 @@ export function ConnectScreen({ last, error, onConnect }: { last: SavedPc | null
           </label>
         </div>
         {formError && <div className="small" style={{ color: 'var(--danger)' }}>{formError}</div>}
-        <button className="btn outline lg block" type="submit">Conectar</button>
+        <button className="btn outline lg block" type="submit">Vincular</button>
       </form>
 
-      <button type="button" className="card connect-last" onClick={() => openWiki()}>
-        <Icon name="wiki" size={20} />
-        <div>
-          <div style={{ fontWeight: 650 }}>Wiki de temas</div>
-          <div className="tiny faint">Fórmulas, definiciones y errores frecuentes. Funciona sin conectarte al PC.</div>
-        </div>
-        <Icon name="right" size={18} />
-      </button>
-
       <p className="tiny faint connect-help">
-        En la app de escritorio abre la <b>Pizarra</b> (o un ejercicio → <b>A mano</b>) y toca <b>Conectar móvil</b>: ahí están el QR, la dirección y el código. El móvil y el PC deben estar en la misma red Wi-Fi.
+        En la app de escritorio toca <b>Conectar móvil</b> (en la <b>Pizarra</b> o en <b>Ajustes</b>): ahí están el QR, la dirección y el código. El móvil y el PC deben estar en la misma red Wi-Fi.
       </p>
-      <p className="tiny faint connect-help">{COPYRIGHT}</p>
     </div>
   );
 }

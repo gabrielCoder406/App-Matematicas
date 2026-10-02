@@ -1,14 +1,15 @@
-// Pizarra del móvil: lo que se escribe aquí aparece al instante en la app de escritorio.
+// Pizarra remota: lo que se escribe en el móvil aparece al instante en la pizarra (o el
+// ejercicio) abierta en la app de escritorio.
 import { Capacitor } from '@capacitor/core';
-import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '../components/Icon';
 import { RichText, Tex } from '../components/Math';
 import { InkModel, INK_COLORS, resolveColor } from '../canvas/ink';
 import { InkCanvas, type CanvasTool, type InkCanvasHandle } from '../canvas/InkCanvas';
 import type { AnyMessage, PeerMessage } from '../canvas/protocol';
+import { useKeepAwake, useLandscape } from '../phone/native';
 import { openWiki, useWiki, useWikiContext } from '../store/wiki';
-import { CompanionLink, type LinkStatus } from './connection';
+import { deviceKind, type CompanionLink, type LinkStatus } from './connection';
 
 interface BoardInfo {
   width: number;
@@ -28,19 +29,19 @@ const STATUS_TEXT: Record<LinkStatus, string> = {
   rejected: 'desconectado',
 };
 
-export function Board({ wsUrl, label, onExit, onRejected, onHostName }: {
-  wsUrl: string;
+export function Board({ link, label, onExit, onRejected, exitLabel = 'Desconectar' }: {
+  /** Conexión con el PC (la abre y la cierra quien la crea). */
+  link: CompanionLink;
   /** Dirección del PC (para los mensajes de ayuda). */
   label: string;
   onExit?(): void;
-  onRejected(message: string): void;
-  onHostName?(name: string): void;
+  onRejected?(message: string): void;
+  exitLabel?: string;
 }) {
   const model = useMemo(() => new InkModel(), []);
   const canvasRef = useRef<InkCanvasHandle>(null);
-  const link = useRef<CompanionLink | null>(null);
   const localIds = useRef(new Set<string>());
-  const [status, setStatus] = useState<LinkStatus>('connecting');
+  const [status, setStatus] = useState<LinkStatus>(link.status);
   const [board, setBoard] = useState<BoardInfo | null>(null);
   const [idle, setIdle] = useState<{ action: string; title: string } | null>(null);
   const [tool, setTool] = useState<CanvasTool>('pen');
@@ -108,44 +109,26 @@ export function Board({ wsUrl, label, onExit, onRejected, onHostName }: {
           break;
       }
     };
-    const l = new CompanionLink(wsUrl, {
+    const unsubscribe = link.subscribe({
+      // Al reconectar, el PC vuelve a enviar el tablero solo (al recibir el saludo de la conexión).
       status: (s, detail) => {
         setStatus(s);
-        if (s === 'rejected') onRejectedRef.current(detail ?? 'La conexión fue rechazada.');
+        if (s === 'rejected') onRejectedRef.current?.(detail ?? 'La conexión fue rechazada.');
       },
       message: handle,
     });
-    link.current = l;
-    l.open();
-    const onVisible = () => document.visibilityState === 'visible' && l.kick();
-    document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      document.removeEventListener('visibilitychange', onVisible);
-      l.close();
-      link.current = null;
-    };
-  }, [wsUrl, model]);
-
-  // Nombre del PC (lo muestra la pantalla de conexión la próxima vez).
-  useEffect(() => {
-    if (status !== 'online' || !onHostName) return;
-    const base = wsUrl.replace(/^ws/, 'http').replace(/\/ws\?.*$/, '');
-    fetch(`${base}/api/health`).then((r) => r.json()).then((h: { name?: string }) => h.name && onHostName(h.name)).catch(() => {});
-  }, [status, wsUrl, onHostName]);
+    setStatus(link.status);
+    // La conexión ya estaba abierta (app del móvil): se pide el tablero actual.
+    if (link.status === 'online') link.send({ type: 'hello', device: deviceKind() });
+    return unsubscribe;
+  }, [link, model]);
 
   useWikiContext(board?.topic);
   const wikiOpen = useWiki((s) => s.open);
 
   // En la app Android, el tablero (más ancho que alto) se usa en horizontal; con la wiki
   // abierta se libera el giro para poder leer en vertical.
-  const hasBoard = !!board;
-  useEffect(() => {
-    if (!hasBoard || wikiOpen || !Capacitor.isNativePlatform()) return;
-    ScreenOrientation.lock({ orientation: 'landscape' }).catch(() => {});
-    return () => {
-      ScreenOrientation.unlock().catch(() => {});
-    };
-  }, [hasBoard, wikiOpen]);
+  useLandscape(!!board && !wikiOpen);
 
   useEffect(() => {
     const onResize = () => {
@@ -156,8 +139,12 @@ export function Board({ wsUrl, label, onExit, onRejected, onHostName }: {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  // App Android: la pantalla no se apaga mientras se usa como pizarra.
+  useKeepAwake(true);
+
   useEffect(() => {
-    // Mantener la pantalla encendida mientras se escribe (en la app Android lo hace el sistema).
+    // Navegador del móvil: la pantalla no se apaga mientras se escribe.
+    if (Capacitor.isNativePlatform()) return undefined;
     let lock: { release(): Promise<void> } | null = null;
     const req = async () => {
       try {
@@ -174,7 +161,7 @@ export function Board({ wsUrl, label, onExit, onRejected, onHostName }: {
     };
   }, []);
 
-  const send = (m: PeerMessage) => link.current?.send(m);
+  const send = (m: PeerMessage) => link.send(m);
   const online = status === 'online';
 
   const onLocal = (m: PeerMessage) => {
@@ -252,7 +239,7 @@ export function Board({ wsUrl, label, onExit, onRejected, onHostName }: {
     <div className={`companion ${compact ? 'compact' : ''}`}>
       <header className="companion-bar">
         {onExit && (
-          <button className="icon-btn" onClick={onExit} aria-label="Desconectar" title="Desconectar"><Icon name="left" size={20} /></button>
+          <button className="icon-btn" onClick={onExit} aria-label={exitLabel} title={exitLabel}><Icon name="left" size={20} /></button>
         )}
         <div className="row companion-title" title={STATUS_TEXT[status]}>
           <span className={`status-dot ${online ? 'online' : status === 'rejected' || status === 'unreachable' ? 'error' : ''}`} />
@@ -322,7 +309,7 @@ export function Board({ wsUrl, label, onExit, onRejected, onHostName }: {
             <>
               <span className="spinner" />
               <p className="muted">{status === 'unreachable' ? 'Buscando el PC…' : 'Conectando con la app de escritorio…'}</p>
-              {onExit && <button className="btn ghost" onClick={onExit}>Cambiar de PC</button>}
+              {onExit && <button className="btn ghost" onClick={onExit}>{exitLabel}</button>}
             </>
           )}
         </div>

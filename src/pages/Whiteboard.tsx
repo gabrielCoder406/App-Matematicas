@@ -8,6 +8,8 @@ import { MathInput } from '../components/MathInput';
 import { errorLabel } from '../content/errorCatalog';
 import { useActiveTime } from '../lib/activity';
 import { recognize, type TutorRequest } from '../lib/api';
+import { IS_PHONE } from '../lib/platform';
+import { useBackHandler, useKeepAwake, useLandscape } from '../phone/native';
 import { parse } from '../math/parse';
 import { validateSteps, type LineResult, type StepMode } from '../math/validate';
 import { useUi } from '../store/ui';
@@ -47,10 +49,22 @@ export default function Whiteboard() {
   const [full, setFull] = useState(false);
   const ocrAvailable = useUi((s) => s.ocrAvailable);
   const tutorAvailable = useUi((s) => s.tutorAvailable);
+  const serverOk = useUi((s) => s.serverOk);
   const [tutorOpen, setTutorOpen] = useState(false);
   const peers = usePairing((s) => s.peers);
   const runRef = useRef<() => void>(() => {});
   useActiveTime(undefined);
+  // Móvil: la pantalla no se apaga mientras se escribe; a pantalla completa, en horizontal.
+  useKeepAwake(IS_PHONE);
+  useLandscape(IS_PHONE && full);
+  useBackHandler(() => setFull(false), full);
+
+  useEffect(() => {
+    if (!full) return undefined;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setFull(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [full]);
 
   const run = async () => {
     const png = canvasRef.current?.exportPng();
@@ -131,10 +145,14 @@ export default function Whiteboard() {
       <div className="page-header">
         <div>
           <h1>Pizarra</h1>
-          <p>Escribe con el mouse, el dedo o un lápiz digital —o desde el móvil— y convierte tu letra en fórmulas editables.</p>
+          <p>{IS_PHONE ? 'Escribe con el dedo o un lápiz y convierte tu letra en fórmulas editables (con la IA del PC vinculado).' : 'Escribe con el mouse, el dedo o un lápiz digital —o desde el móvil— y convierte tu letra en fórmulas editables.'}</p>
         </div>
         <div className="row wrap">
-          <span className={`badge ${peers > 0 ? 'success' : ''}`}><Icon name="phone" size={13} /> {peers > 0 ? 'Móvil conectado' : 'Sin móvil'}</span>
+          {IS_PHONE ? (
+            <Link to="/pizarra-pc" className="btn sm ghost" title="Usar el móvil como pizarra de la app del PC"><Icon name="monitor" size={16} /> Escribir en el PC</Link>
+          ) : (
+            <span className={`badge ${peers > 0 ? 'success' : ''}`}><Icon name="phone" size={13} /> {peers > 0 ? 'Móvil conectado' : 'Sin móvil'}</span>
+          )}
           <button className="icon-btn" onClick={() => setFull((f) => !f)} title={full ? 'Salir de pantalla completa' : 'Pantalla completa'}>
             <Icon name={full ? 'minimize' : 'maximize'} />
           </button>
@@ -153,11 +171,26 @@ export default function Whiteboard() {
             onUndo={() => { model.undo(); pairing.sync(); }}
             onRedo={() => { model.redo(); pairing.sync(); }}
             onClear={() => { model.clear(); pairing.sync(); setLines([]); setResults(null); }}
-            onPair={() => setPairOpen(true)}
+            onPair={IS_PHONE || full ? undefined : () => setPairOpen(true)}
+            compact={IS_PHONE && full}
+            extra={full && (
+              <>
+                <button type="button" className="btn primary sm" onClick={() => { setFull(false); void run(); }} disabled={busy || !ocrAvailable}>
+                  <Icon name="scan" size={16} /> Reconocer
+                </button>
+                <button type="button" className="icon-btn" onClick={() => setFull(false)} title="Salir de pantalla completa" aria-label="Salir de pantalla completa">
+                  <Icon name="minimize" size={19} />
+                </button>
+              </>
+            )}
           />
-          <InkCanvas ref={canvasRef} model={model} boardWidth={BOARD_W} boardHeight={BOARD_H} tool={tool} color={color} size={size} onLocal={(m) => pairing.local(m)} />
-          <div className="tiny faint" style={{ marginTop: 6 }}>
-            Atajos: <span className="kbd">P</span> lápiz · <span className="kbd">H</span> resaltador · <span className="kbd">E</span> borrador · <span className="kbd">L</span> láser · <span className="kbd">Ctrl+Z</span> deshacer · tachar en zigzag borra lo que está debajo.
+          <InkCanvas ref={canvasRef} model={model} boardWidth={BOARD_W} boardHeight={BOARD_H} tool={tool} color={color} size={size} onLocal={(m) => pairing.local(m)} fit={full} />
+          <div className="tiny faint wb-hint" style={{ marginTop: 6 }}>
+            {IS_PHONE ? (
+              <>Dos dedos: deshacer · tres: rehacer · tachar en zigzag borra lo que está debajo. Para escribir con más espacio, usa la pantalla completa.</>
+            ) : (
+              <>Atajos: <span className="kbd">P</span> lápiz · <span className="kbd">H</span> resaltador · <span className="kbd">E</span> borrador · <span className="kbd">L</span> láser · <span className="kbd">Ctrl+Z</span> deshacer · tachar en zigzag borra lo que está debajo.</>
+            )}
           </div>
         </div>
         <div className="wb-side stack">
@@ -169,11 +202,20 @@ export default function Whiteboard() {
                 {busy ? 'Leyendo…' : 'Reconocer'}
               </button>
             </div>
-            {busy && <div className="tiny faint" style={{ marginBottom: 8 }}>Con la IA de este PC la lectura tarda unos 20 segundos (más la primera vez).</div>}
+            {busy && <div className="tiny faint" style={{ marginBottom: 8 }}>Con la IA {IS_PHONE ? 'del PC' : 'de este PC'} la lectura tarda unos 20 segundos (más la primera vez).</div>}
             {!ocrAvailable && (
               <div className="callout info small">
                 <Icon className="callout-icon" name="alert" size={16} />
-                <div>La lectura de la escritura no está lista: abre Ollama y descarga DeepSeek-OCR, o configura Claude, en <Link to="/ajustes">Ajustes</Link>. También puedes escribir las líneas con el teclado abajo.</div>
+                {IS_PHONE ? (
+                  <div>
+                    {serverOk
+                      ? 'La app del PC no tiene configurada la lectura de la escritura (Ajustes, en el PC).'
+                      : <>Para leer la escritura se usa la IA del PC: abre la app del PC (misma red Wi-Fi) y <Link to="/pc">vincula el móvil</Link>.</>}
+                    {' '}También puedes escribir las líneas con el teclado abajo.
+                  </div>
+                ) : (
+                  <div>La lectura de la escritura no está lista: abre Ollama y descarga DeepSeek-OCR, o configura Claude, en <Link to="/ajustes">Ajustes</Link>. También puedes escribir las líneas con el teclado abajo.</div>
+                )}
               </div>
             )}
             {error && <div className="callout danger small" style={{ marginTop: 8 }}><Icon className="callout-icon" name="alert" size={16} />{error}</div>}
@@ -234,7 +276,7 @@ export default function Whiteboard() {
             )}
             {firstTex && !results && <div className="tiny faint" style={{ marginTop: 8 }}>Enunciado: <Tex tex={firstTex} /></div>}
             {tutorAvailable && lines.some((l) => l.trim()) && !tutorOpen && (
-              <button className="btn sm ghost" style={{ marginTop: 8 }} onClick={() => setTutorOpen(true)} title="Explicación del tutor con IA (DeepSeek Math, en tu PC)">
+              <button className="btn sm ghost" style={{ marginTop: 8 }} onClick={() => setTutorOpen(true)} title="Explicación del tutor con IA (DeepSeek Math, en el PC)">
                 <Icon name="brain" size={16} /> Explícame mis pasos
               </button>
             )}

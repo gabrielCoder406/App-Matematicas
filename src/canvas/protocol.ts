@@ -1,5 +1,7 @@
 // Protocolo de mensajes entre la pizarra del PC (anfitrión) y el móvil (acompañante).
 // Solo viajan datos vectoriales: coordenadas en unidades del tablero, presión y velocidad.
+// Por la misma conexión viajan la sincronización del progreso y la IA (ver sync/messages.ts).
+import type { AiMessage, SyncMessage } from '../sync/messages';
 
 /** Punto: [x, y, presión 0-1, velocidad en unidades/ms]. */
 export type WirePoint = [number, number, number, number];
@@ -47,7 +49,10 @@ export type ServerMessage =
   | { type: 'host'; online: boolean }
   | { type: 'error'; message: string };
 
-export type AnyMessage = PeerMessage | ServerMessage;
+/** Lo que se envía por la conexión del emparejamiento (en cualquier sentido). */
+export type LinkMessage = PeerMessage | SyncMessage | AiMessage;
+
+export type AnyMessage = LinkMessage | ServerMessage;
 
 export function round1(v: number): number {
   return Math.round(v * 10) / 10;

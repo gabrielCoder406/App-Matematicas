@@ -1,8 +1,9 @@
-// Compilación de la app del móvil (Pizarra Matemática) para empaquetarla con Capacitor.
+// Compilación de la app del móvil (Pizarra Matemática) para empaquetarla con Capacitor: la misma
+// interfaz que la de escritorio, que se sincroniza con el PC (ver src/phone/ y src/sync/).
 // En desarrollo: `npm run dev:companion` y abrir http://localhost:5174/companion.html
 import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vite';
-import { WATCH_IGNORED } from './vite.config';
+import { APP_VERSION, WATCH_IGNORED } from './vite.config';
 
 /** Capacitor espera un index.html en la carpeta web. */
 function renameToIndex(): Plugin {
@@ -20,6 +21,7 @@ export default defineConfig({
   base: './',
   publicDir: false,
   plugins: [react(), renameToIndex()],
+  define: { __PHONE_APP__: 'true', __APP_VERSION__: JSON.stringify(APP_VERSION) },
   build: {
     outDir: 'dist-companion',
     emptyOutDir: true,

@@ -58,6 +58,8 @@ const PATHS: Record<string, string> = {
   search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20.5 20.5 16 16',
   sigma: 'M18 5H6.5l6 7-6 7H18',
   external: 'M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5',
+  monitor: 'M3 4.5h18v11.5H3zM8.5 20.5h7M12 16v4.5',
+  more: 'M5 10.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zM12 10.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zM19 10.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z',
 };
 
 export type IconName = keyof typeof PATHS;

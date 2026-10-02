@@ -1,6 +1,6 @@
-// Wiki de temas en el móvil: la misma consulta que la app de escritorio, incluida en el APK
-// (funciona sin conexión y sin el PC). El botón «atrás» de Android vuelve a la ficha anterior
-// o cierra la wiki, en lugar de desconectar la pizarra.
+// Wiki de temas sobre la pizarra remota en el navegador del móvil (enlace del QR). El botón
+// «atrás» del navegador vuelve a la ficha anterior o cierra la wiki, en lugar de salir de la
+// pizarra. (La app del móvil usa el panel de la wiki de siempre: components/wiki/WikiPanel.tsx.)
 import { useEffect, useRef } from 'react';
 import { WikiBrowser } from '../components/wiki/WikiBrowser';
 import { useWiki } from '../store/wiki';

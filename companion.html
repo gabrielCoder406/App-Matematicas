@@ -7,9 +7,15 @@
     <meta name="description" content="Derechos reservados por Gabriel Gonzalez" />
     <meta name="author" content="Gabriel Gonzalez" />
     <title>Pizarra Matemática</title>
+    <style>
+      /* Mientras carga la app (la primera vez, unos instantes). */
+      .boot { min-height: 100vh; display: grid; place-content: center; justify-items: center; gap: 12px; font-family: system-ui, sans-serif; color: #565d71; background: #f5f6fb; }
+      .boot-mark { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; color: #fff; font: 2rem Georgia, serif; background: linear-gradient(135deg, #5048e5, #a55cf0); }
+      @media (prefers-color-scheme: dark) { .boot { background: #0e1016; color: #a6acbd; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/companion/main.tsx"></script>
+    <div id="root"><div class="boot"><div class="boot-mark">∑</div>Cargando…</div></div>
+    <script type="module" src="/src/phone/main.tsx"></script>
   </body>
 </html>

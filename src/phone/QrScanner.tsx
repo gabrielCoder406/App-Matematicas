@@ -3,6 +3,7 @@
 import jsQR from 'jsqr';
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../components/Icon';
+import { useBackHandler } from './native';
 
 interface NativeDetector {
   detect(source: CanvasImageSource): Promise<{ rawValue: string }[]>;
@@ -21,6 +22,7 @@ export function QrScanner({ onResult, onCancel }: { onResult(text: string): bool
   const done = useRef(false);
   const onResultRef = useRef(onResult);
   onResultRef.current = onResult;
+  useBackHandler(onCancel);
 
   useEffect(() => {
     let stream: MediaStream | null = null;

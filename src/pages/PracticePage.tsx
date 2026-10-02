@@ -43,6 +43,8 @@ export default function PracticePage({ mode }: { mode: Mode }) {
   const [log, setLog] = useState<SessionLog[]>([]);
   const [done, setDone] = useState(false);
   const [events, setEvents] = useState<EngineEvent[]>([]);
+  /** Cambia con «Otra sesión»: empieza una nueva sin recargar la app. */
+  const [session, setSession] = useState(0);
   const startP = useRef<number>(skillId ? sp(useProgress.getState(), skillId).pL : 0);
   const startTime = useRef(Date.now());
   const reviewQueue = useRef<string[]>([]);
@@ -95,10 +97,11 @@ export default function PracticePage({ mode }: { mode: Mode }) {
     setDone(false);
     setEvents([]);
     startTime.current = Date.now();
+    startP.current = skillId ? sp(useProgress.getState(), skillId).pL : 0;
     const first = pick();
     setItem(first);
     if (!first) setDone(true);
-  }, [mode, skillId, bug, pick]);
+  }, [mode, skillId, bug, pick, session]);
 
   const onResult = (o: ExerciseOutcome) => {
     if (!item) return;
@@ -188,7 +191,7 @@ export default function PracticePage({ mode }: { mode: Mode }) {
   const progress = Math.min(1, log.length / SESSION_SIZE[mode]);
   const currentP = skillId ? sp(data, skillId).pL : 0;
 
-  if (done) return <Summary mode={mode} skillId={skillId} bug={bug} log={log} events={events} startP={startP.current} endP={currentP} elapsed={Date.now() - startTime.current} onAgain={() => navigate(0)} />;
+  if (done) return <Summary mode={mode} skillId={skillId} bug={bug} log={log} events={events} startP={startP.current} endP={currentP} elapsed={Date.now() - startTime.current} onAgain={() => setSession((n) => n + 1)} />;
 
   const rem = item?.remediation;
   const banner = rem ? (

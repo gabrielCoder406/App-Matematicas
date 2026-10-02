@@ -240,7 +240,11 @@ function ListView({ filter }: { filter: BlockId | null }) {
 export default function SkillMap() {
   const [params, setParams] = useSearchParams();
   const filter = (params.get('bloque') as BlockId | null) ?? null;
-  const [view, setView] = useState<'graph' | 'list'>(params.get('vista') === 'lista' ? 'list' : 'graph');
+  // En pantallas chicas (el móvil) el grafo completo no se lee: se empieza por la lista.
+  const [view, setView] = useState<'graph' | 'list'>(() => {
+    const v = params.get('vista');
+    return v === 'lista' || (v !== 'grafo' && window.innerWidth < 700) ? 'list' : 'graph';
+  });
   const data = useProgress();
   const states = allStates(data);
   const counts = Object.values(states).reduce((acc, s) => ({ ...acc, [s]: (acc[s] ?? 0) + 1 }), {} as Record<SkillState, number>);

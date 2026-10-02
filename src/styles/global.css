@@ -258,17 +258,60 @@ textarea {
   margin: 6px 0 0;
 }
 
-.bottom-nav {
+.bottom-nav,
+.topbar {
   display: none;
 }
 
 @media (max-width: 900px) {
+  .app-shell {
+    flex-direction: column;
+  }
+
   .sidebar {
     display: none;
   }
 
   .page {
-    padding: 18px 16px 96px;
+    padding: 18px 16px calc(96px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Barra superior: marca, sincronización (móvil), racha y buscador de la wiki. */
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: sticky;
+    top: 0;
+    z-index: 38;
+    padding: calc(8px + env(safe-area-inset-top, 0px)) 10px 8px 14px;
+    background: color-mix(in srgb, var(--surface) 94%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .topbar .brand {
+    padding: 0;
+    font-size: 1rem;
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  .topbar .brand-mark {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    font-size: 1rem;
+  }
+
+  .topbar-streak {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text-2);
+    padding: 0 4px;
   }
 
   .bottom-nav {
@@ -284,7 +327,9 @@ textarea {
     justify-content: space-around;
   }
 
-  .bottom-nav a {
+  .bottom-nav a,
+  .bottom-nav button {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -292,13 +337,83 @@ textarea {
     font-size: 0.7rem;
     color: var(--text-3);
     padding: 4px 8px;
+    border: none;
     border-radius: 10px;
+    background: none;
+    cursor: pointer;
     text-decoration: none;
     min-width: 56px;
   }
 
-  .bottom-nav a.active {
+  .bottom-nav a.active,
+  .bottom-nav button.active {
     color: var(--primary);
+  }
+}
+
+.nav-dot {
+  position: absolute;
+  top: 3px;
+  right: 16px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+  border: 2px solid var(--surface);
+}
+
+/* Menú «Más» de las pantallas chicas: sube desde la barra inferior. */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  background: rgba(10, 12, 20, 0.35);
+  display: flex;
+  align-items: flex-end;
+  animation: fade-in 0.15s ease;
+}
+
+.sheet {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px;
+  padding: 12px 12px calc(84px + env(safe-area-inset-bottom, 0px));
+  background: var(--surface);
+  border-radius: 18px 18px 0 0;
+  box-shadow: var(--shadow-lg);
+  animation: sheet-up 0.18s ease;
+}
+
+.sheet-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sheet-item:hover {
+  text-decoration: none;
+}
+
+.sheet-item.active {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.sheet-item .badge {
+  margin-left: auto;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
   }
 }
 
@@ -870,7 +985,7 @@ textarea {
 
 @media (max-width: 900px) {
   .toasts {
-    bottom: 84px;
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
     right: 12px;
   }
 }

@@ -1,4 +1,5 @@
-// Estado de interfaz no persistente: avisos (toasts) y disponibilidad del servidor y de la IA.
+// Estado de interfaz no persistente: avisos (toasts) y disponibilidad del servidor y de la IA
+// (en la app del móvil, la del PC vinculado: la actualiza phone/link.ts).
 import { create } from 'zustand';
 import { fetchHealth } from '../lib/api';
 
@@ -19,6 +20,8 @@ interface UiState {
   ocrAvailable: boolean;
   /** El tutor (DeepSeek Math) está descargado y Ollama está abierto. */
   tutorAvailable: boolean;
+  /** Nombre de este equipo (el móvil lo muestra al vincularse). */
+  hostName?: string;
   toast(t: Omit<Toast, 'id'>, ms?: number): void;
   dismiss(id: number): void;
   setServer(ok: boolean, ocr: boolean, tutor?: boolean): void;
@@ -46,6 +49,6 @@ export const useUi = create<UiState>()((set, get) => ({
   },
   async refreshHealth() {
     const h = await fetchHealth();
-    set({ serverOk: !!h, ocrAvailable: !!h?.ocr, tutorAvailable: !!h?.tutor });
+    set({ serverOk: !!h, ocrAvailable: !!h?.ocr, tutorAvailable: !!h?.tutor, ...(h?.name ? { hostName: h.name } : {}) });
   },
 }));

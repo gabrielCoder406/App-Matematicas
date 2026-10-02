@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { SKILLS } from '../content/curriculum';
+import { IS_PHONE } from '../lib/platform';
 import { useProgress } from '../store/progress';
 
 const FEATURES = [
@@ -59,6 +60,14 @@ export default function Onboarding() {
           <button className="btn ghost block" onClick={() => go('/')}>
             Empezar desde el principio
           </button>
+          {IS_PHONE && (
+            <>
+              <div className="connect-or"><span>¿Ya usas la app en el PC?</span></div>
+              <button className="btn outline block" onClick={() => navigate('/pc')}>
+                <Icon name="monitor" size={18} /> Vincular con el PC
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

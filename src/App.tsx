@@ -3,8 +3,10 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout, Toasts, useThemeEffect } from './components/Layout';
 import { pairing, usePairing } from './canvas/pairing';
+import { IS_PHONE } from './lib/platform';
 import { useProgress } from './store/progress';
 import { useUi } from './store/ui';
+import { startSyncHost } from './sync/host';
 import Home from './pages/Home';
 
 const SkillMap = lazy(() => import('./pages/SkillMap'));
@@ -19,18 +21,29 @@ const Settings = lazy(() => import('./pages/Settings'));
 const Diagnostic = lazy(() => import('./pages/Diagnostic'));
 const Wiki = lazy(() => import('./pages/Wiki'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
-const CompanionPage = lazy(() => import('./companion/CompanionApp').then((m) => ({ default: () => <m.CompanionApp embedded /> })));
+const CompanionPage = lazy(() => import('./companion/CompanionApp').then((m) => ({ default: m.CompanionApp })));
+// Solo en la app del móvil.
+const PcLinkPage = lazy(() => import('./phone/PcLinkPage'));
+const RemoteBoardPage = lazy(() => import('./phone/RemoteBoardPage'));
+const SyncConflictDialog = lazy(() => import('./phone/SyncConflictDialog'));
 
 function Loading() {
   return <div className="empty" style={{ paddingTop: 80 }}>Cargando…</div>;
 }
 
-/** Conexión con el móvil: activa en segundo plano para que la app del teléfono se reconecte sola. */
+/**
+ * PC: conexión con los móviles activa en segundo plano, para que se reconecten solos, sincronicen
+ * el progreso y puedan escribir en la pizarra abierta.
+ */
 function usePairingHost() {
   const navigate = useNavigate();
   const serverOk = useUi((s) => s.serverOk);
   const toast = useUi((s) => s.toast);
   const hasPeer = usePairing((s) => s.peers > 0);
+
+  useEffect(() => {
+    startSyncHost();
+  }, []);
 
   useEffect(() => {
     pairing.navigate = (path) => navigate(path);
@@ -44,21 +57,27 @@ function usePairingHost() {
   }, [serverOk]);
 
   useEffect(() => {
-    if (hasPeer) toast({ kind: 'success', title: 'Móvil conectado', body: 'Lo que escribas en el teléfono aparecerá en la pizarra abierta.', icon: 'phone' }, 3500);
+    if (hasPeer) toast({ kind: 'success', title: 'Móvil conectado', body: 'El progreso se sincroniza solo y puedes escribir desde el teléfono en la pizarra abierta.', icon: 'phone' }, 3500);
   }, [hasPeer, toast]);
 }
+
+/** Móvil: la conexión con el PC la abre phone/main.tsx al arrancar. */
+function useNoHost() {}
+
+const useConnection = IS_PHONE ? useNoHost : usePairingHost;
 
 export default function App() {
   useThemeEffect();
   const refreshHealth = useUi((s) => s.refreshHealth);
   const location = useLocation();
   const onboarded = useProgress((s) => s.onboarded);
-  const companion = location.pathname.startsWith('/companion');
+  const companion = !IS_PHONE && location.pathname.startsWith('/companion');
 
   // Estado del servidor y de la IA: al abrir, al volver a la ventana y cada 30 s
-  // (así la app nota si Ollama se abre o se cierra mientras está en uso).
+  // (así la app nota si Ollama se abre o se cierra mientras está en uso). En el móvil lo
+  // informa el PC vinculado.
   useEffect(() => {
-    if (companion) return;
+    if (companion || IS_PHONE) return;
     void refreshHealth();
     const onFocus = () => void refreshHealth();
     window.addEventListener('focus', onFocus);
@@ -79,18 +98,39 @@ export default function App() {
     );
   }
 
-  return <MainApp onboarded={onboarded} />;
+  return (
+    <>
+      <MainApp onboarded={onboarded} />
+      {IS_PHONE && (
+        <Suspense fallback={null}>
+          <SyncConflictDialog />
+        </Suspense>
+      )}
+    </>
+  );
 }
 
 function MainApp({ onboarded }: { onboarded: boolean }) {
   const location = useLocation();
-  usePairingHost();
+  useConnection();
 
   if (location.pathname === '/bienvenida' || (!onboarded && location.pathname === '/')) {
     return (
       <ErrorBoundary resetKey={location.pathname}>
         <Suspense fallback={<Loading />}>
           <Onboarding />
+        </Suspense>
+        <Toasts />
+      </ErrorBoundary>
+    );
+  }
+
+  // Móvil como pizarra del PC: a pantalla completa, sin la navegación de la app.
+  if (IS_PHONE && location.pathname === '/pizarra-pc') {
+    return (
+      <ErrorBoundary resetKey={location.pathname}>
+        <Suspense fallback={<Loading />}>
+          <RemoteBoardPage />
         </Suspense>
         <Toasts />
       </ErrorBoundary>
@@ -118,6 +158,7 @@ function MainApp({ onboarded }: { onboarded: boolean }) {
             <Route path="/progreso" element={<Progress />} />
             <Route path="/diagnostico" element={<Diagnostic />} />
             <Route path="/ajustes" element={<Settings />} />
+            {IS_PHONE && <Route path="/pc" element={<PcLinkPage />} />}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
